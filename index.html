@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GRABVR Mod Manager</title>
+<style>
+:root{--bg:#0f1117;--sf:#181b25;--sf2:#222638;--tx:#e8eaf3;--mu:#8a90ab;--ln:#2a2f45;--ac:#7c5cff;--ok:#00b894;--er:#ff7675;color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f4f5f9;--sf:#fff;--sf2:#eceef5;--tx:#1a1d29;--mu:#6b7089;--ln:#d9dce8;color-scheme:light}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.app{max-width:720px;margin:0 auto;padding:14px;display:grid;gap:12px}
+header{display:flex;justify-content:space-between;align-items:center}
+h1{font-size:20px;margin:0}h1 b{color:var(--ac)}
+.pill{display:inline-flex;gap:6px;align-items:center;font-size:12px;background:var(--sf2);padding:4px 10px;border-radius:99px}
+.d{width:8px;height:8px;border-radius:50%;background:var(--er)}.d.on{background:var(--ok)}
+nav{display:flex;gap:6px;overflow-x:auto}
+nav button{flex:1;white-space:nowrap}
+nav button.act{background:var(--ac);border-color:var(--ac);color:#fff}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:12px;padding:14px;display:grid;gap:10px}
+.card h2{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>*{flex:1}
+button,input{font:inherit;border-radius:10px;border:1px solid var(--ln);background:var(--sf2);color:var(--tx);padding:10px 12px;min-height:42px}
+button{cursor:pointer}button:hover{border-color:var(--ac)}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
+button.dn{color:var(--er)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.mu{color:var(--mu);font-size:13px}
+.item{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--ln);border-radius:10px;background:var(--sf2)}
+.item .i{flex:1;min-width:0}.item .n{font-weight:600}
+.item button{flex:none;min-height:36px;padding:6px 10px}
+.sw{position:relative;width:44px;height:24px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;width:100%;height:100%;margin:0;min-height:0;cursor:pointer;z-index:1}
+.sw i{position:absolute;inset:0;background:var(--ln);border-radius:99px;transition:.2s}
+.sw i::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:.2s}
+.sw input:checked+i{background:var(--ac)}.sw input:checked+i::after{transform:translateX(20px)}
+.bar{height:8px;background:var(--sf2);border-radius:99px;overflow:hidden}.bar div{height:100%;width:0;background:var(--ac);transition:width .2s}
+.log{background:#0a0b10;color:#c9d1e6;border-radius:10px;padding:10px;font:12px/1.6 ui-monospace,monospace;height:140px;overflow:auto}
+.log .e{color:#ff7675}.log .s{color:#55efc4}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1><b>GRAB</b>VR</h1>
+    <span class="pill"><span class="d" id="dot"></span><span id="st">Not connected</span></span>
+  </header>
+
+  <nav id="nav">
+    <button data-t="setup" class="act">Setup</button>
+    <button data-t="mods">Mods</button>
+    <button data-t="levels">Levels</button>
+    <button data-t="store">Store</button>
+    <button data-t="play">Play</button>
+  </nav>
+
+  <!-- SETUP -->
+  <section id="t-setup" class="grid" style="display:grid;gap:12px">
+    <div class="card">
+      <h2>1 · Wireless debugging</h2>
+      <p class="mu" style="margin:0">Turn on Wireless debugging, tap “Pair device with code”, then enter the details below.</p>
+      <button id="devset">Open developer settings</button>
+      <div class="row">
+        <input id="pport" inputmode="numeric" placeholder="Pairing port">
+        <input id="pcode" inputmode="numeric" placeholder="6-digit code">
+      </div>
+      <input id="cport" inputmode="numeric" placeholder="Connect port (shown on main screen)">
+      <div class="row"><button id="pair" class="p">Pair</button><button id="recon">Reconnect</button></div>
+      <div class="row" style="justify-content:space-between"><span>Auto-reconnect</span>
+        <label class="sw" style="flex:none"><input type="checkbox" id="auto"><i></i></label></div>
+    </div>
+    <div class="card">
+      <h2>2 · Base game</h2>
+      <div class="mu" id="base">No base saved.</div>
+      <div class="mu">GRAB only needs its .apk. No OBB file is used.</div>
+      <button id="save" class="p">Save original game file</button>
+      <button id="choose">Manually save original game file</button>
+      <button id="pull">Pull from device</button>
+      <button id="restore" class="dn">Restore original base</button>
+    </div>
+  </section>
+
+  <!-- MODS -->
+  <section id="t-mods" class="card hide">
+    <h2>Installed mods</h2>
+    <div class="row"><button id="all">Enable all</button><button id="none">Disable all</button></div>
+    <div id="mods" style="display:grid;gap:8px"></div>
+    <button id="local">+ Install from file</button>
+  </section>
+
+  <!-- LEVELS -->
+  <section id="t-levels" class="card hide">
+    <h2>Levels</h2>
+    <p class="mu" style="margin:0">Imports .level files into the GRAB user levels folder on the headset. Needs an active wireless debugging connection.</p>
+    <div class="row"><button id="limp" class="p">Import .level files</button><button id="lref">Refresh</button></div>
+    <div id="llist" style="display:grid;gap:8px"></div>
+  </section>
+
+  <!-- STORE -->
+  <section id="t-store" class="card hide">
+    <h2>Mod store</h2>
+    <div class="row"><input id="surl" placeholder="Store URL"><button id="ssave" style="flex:none">Save</button></div>
+    <div class="row"><input id="sq" placeholder="Search..."><button id="sgo" style="flex:none">Search</button></div>
+    <div id="slist" style="display:grid;gap:8px"></div>
+  </section>
+
+  <!-- PLAY -->
+  <section id="t-play" class="card hide">
+    <h2>Apply &amp; launch</h2>
+    <p class="mu" style="margin:0">Applies enabled mods to the base and installs the patched game.</p>
+    <button id="apply" class="p">Apply mods</button>
+    <div class="row"><button id="launch">Launch</button><button id="stop" class="dn">Stop game</button></div>
+  </section>
+
+  <div class="card">
+    <div class="bar"><div id="bar"></div></div>
+    <div class="log" id="log"></div>
+  </div>
+</div>
+
+<script src="bridge.js"></script>
+<script>
+'use strict';
+// Browser preview only: if the Kotlin bridge is missing, use a small mock.
+if(!window.__nativeFound){
+  const S={levels:[{name:'My Parkour.level',size:48211}],connected:false,auto:true,hasBase:false,mods:[{id:'a',name:'Custom Avatars',version:'1.0',enabled:true},{id:'b',name:'Menu Theme',version:'0.3',enabled:false}]};
+  const w=(v)=>new Promise(r=>setTimeout(()=>r(v),300));
+  const noop=()=>w(null);
+  window.grabvr={state:()=>w(S),pair:()=>{S.connected=true;return w(true)},pairingPort:()=>w(37123),reconnect:()=>{S.connected=true;return w(true)},
+    setAutoReconnect:(o)=>{S.auto=o;return w(true)},openDevSettings:noop,launch:noop,stopGame:noop,pullBase:()=>{S.hasBase=true;return w(true)},chooseBase:()=>{S.hasBase=true;return w(true)},restoreBase:noop,
+    toggle:(id)=>{const m=S.mods.find(x=>x.id===id);m.enabled=!m.enabled;return w(true)},setMany:(ids,on)=>{S.mods.forEach(m=>m.enabled=on);return w(true)},
+    remove:(id)=>{S.mods=S.mods.filter(m=>m.id!==id);return w(true)},storeConfig:()=>w({url:'https://example.com/store'}),storeSetUrl:noop,
+    storeList:()=>w([{id:'s1',name:'Cosmetic Hats',version:'2.0',description:'Cosmetic only'}]),storeInstall:noop,installLocal:noop,apply:noop,saveOriginal:()=>{S.hasBase=true;return w(true)},
+    listLevels:()=>w(S.levels),importLevels:()=>{S.levels.push({name:'new_'+S.levels.length+'.level',size:20480});return w({imported:['new.level'],failed:[]})},
+    removeLevel:(n)=>{S.levels=S.levels.filter(l=>l.name!==n);return w(true)},
+    onProgress:(cb)=>{window.__mockP=cb;return()=>{}}};
+}
+const $=(i)=>document.getElementById(i);
+const dr=window.grabvr;
+const parse=(v)=>{if(typeof v==='string'){try{return JSON.parse(v)}catch(e){return v}}return v};
+function log(m,c){const d=document.createElement('div');if(c)d.className=c;d.textContent=new Date().toLocaleTimeString()+'  '+m;$('log').appendChild(d);$('log').scrollTop=1e9}
+
+// Explain errors that come from native code built for a different game.
+function why(m){return m}
+
+// Run a bridge call, log errors, refresh state afterwards.
+async function run(label,fn,refresh=true){
+  log(label+'...');
+  try{const r=parse(await fn());log(label+' done','s');if(refresh)await sync();return r}
+  catch(e){log(label+' failed: '+why(e.message),'e');if(/original|no base/i.test(e.message))log('Tip: Setup tab > Save original game file first.','e')}
+}
+
+// Adjust the field names below to match what your Kotlin state() returns.
+async function sync(){
+  const s=parse(await dr.state())||{};
+  const on=!!s.connected;
+  $('dot').classList.toggle('on',on);
+  $('st').textContent=on?'Connected':'Not connected';
+  $('auto').checked=!!(s.autoReconnect??s.auto);
+  $('base').textContent=s.hasBase?('Base saved'+(s.baseVersion?' · '+s.baseVersion:'')):'No base saved.';
+  const box=$('mods');box.innerHTML='';
+  const mods=s.mods||[];
+  if(!mods.length)box.innerHTML='<div class="mu">No mods installed.</div>';
+  mods.forEach((m)=>{
+    const el=document.createElement('div');el.className='item';
+    el.innerHTML='<div class="i"><div class="n"></div><div class="mu"></div></div><button class="dn">Remove</button><label class="sw"><input type="checkbox"><i></i></label>';
+    el.querySelector('.n').textContent=m.name||m.id;
+    el.querySelector('.mu').textContent=(m.version?'v'+m.version+' ':'')+(m.description||'');
+    const cb=el.querySelector('input');cb.checked=!!m.enabled;
+    cb.onchange=()=>run('Toggle '+(m.name||m.id),()=>dr.toggle(m.id));
+    el.querySelector('button').onclick=()=>run('Remove '+(m.name||m.id),()=>dr.remove(m.id));
+    box.appendChild(el);
+  });
+  window.__ids=mods.map((m)=>m.id);
+}
+
+// Tabs
+$('nav').onclick=(e)=>{const t=e.target.dataset.t;if(!t)return;
+  [...$('nav').children].forEach((b)=>b.classList.toggle('act',b===e.target));
+  ['setup','mods','levels','store','play'].forEach((n)=>{const el=$('t-'+n);el.classList.toggle('hide',n!==t);if(n==='setup')el.style.display=n===t?'grid':'none'});
+  if(t==='store')loadStore();
+  if(t==='levels')loadLevels();
+};
+
+// Setup
+$('devset').onclick=()=>run('Open developer settings',()=>dr.openDevSettings(),false);
+$('pair').onclick=()=>run('Pair',()=>dr.pair(+$('pport').value,$('pcode').value,+$('cport').value||null));
+$('recon').onclick=()=>run('Reconnect',()=>dr.reconnect());
+$('auto').onchange=()=>run('Auto-reconnect',()=>dr.setAutoReconnect($('auto').checked),false);
+$('save').onclick=async()=>{
+  log('Saving original game file...');
+  try{await dr.saveOriginal()}
+  catch(e){
+    if(/unknown call/i.test(e.message)){
+      log('App has no saveOriginal, trying Pull from device...');
+      try{await dr.pullBase()}catch(e2){log('Save failed: '+why(e2.message),'e');return}
+    }else{log('Save failed: '+why(e.message),'e');return}
+  }
+  log('Original game file saved','s');await sync();
+};
+$('pull').onclick=()=>run('Pull base',()=>dr.pullBase());
+$('choose').onclick=()=>{log('Pick the original GRAB .apk file (com.slindev.grab_demo).');run('Manually save original game file',()=>dr.chooseBase())};
+$('restore').onclick=()=>{if(confirm('Reinstall the saved original game? The game may lose its saved data.'))run('Restore base',()=>dr.restoreBase())};
+
+// Mods
+$('all').onclick=()=>run('Enable all',()=>dr.setMany(window.__ids||[],true));
+$('none').onclick=()=>run('Disable all',()=>dr.setMany(window.__ids||[],false));
+$('local').onclick=()=>run('Install local',()=>dr.installLocal());
+
+// Store
+async function loadStore(){
+  try{const c=parse(await dr.storeConfig());if(c&&c.url&&!$('surl').value)$('surl').value=c.url}catch(e){}
+  search();
+}
+async function search(){
+  const box=$('slist');box.innerHTML='<div class="mu">Loading...</div>';
+  try{
+    const list=parse(await dr.storeList({query:$('sq').value}))||[];
+    box.innerHTML='';if(!list.length)box.innerHTML='<div class="mu">Nothing found.</div>';
+    list.forEach((m)=>{
+      const el=document.createElement('div');el.className='item';
+      el.innerHTML='<div class="i"><div class="n"></div><div class="mu"></div></div><button class="p">Install</button>';
+      el.querySelector('.n').textContent=m.name||m.id;
+      el.querySelector('.mu').textContent=(m.version?'v'+m.version+' ':'')+(m.description||'');
+      el.querySelector('button').onclick=()=>run('Install '+(m.name||m.id),()=>dr.storeInstall(m.id));
+      box.appendChild(el);
+    });
+  }catch(e){box.innerHTML='';log('Store failed: '+e.message,'e')}
+}
+$('sgo').onclick=search;
+$('ssave').onclick=()=>run('Save store URL',()=>dr.storeSetUrl($('surl').value),false).then(search);
+
+// Levels
+async function loadLevels(){
+  const box=$('llist');box.innerHTML='<div class="mu">Loading...</div>';
+  try{
+    const list=parse(await dr.listLevels())||[];
+    box.innerHTML='';if(!list.length)box.innerHTML='<div class="mu">No levels found.</div>';
+    list.forEach((l)=>{
+      const el=document.createElement('div');el.className='item';
+      el.innerHTML='<div class="i"><div class="n"></div><div class="mu"></div></div><button class="dn">Remove</button>';
+      el.querySelector('.n').textContent=l.name;
+      el.querySelector('.mu').textContent=l.size!=null?Math.round(l.size/1024)+' KB':'';
+      el.querySelector('button').onclick=async()=>{if(!confirm('Delete '+l.name+'?'))return;await run('Remove '+l.name,()=>dr.removeLevel(l.name),false);loadLevels()};
+      box.appendChild(el);
+    });
+  }catch(e){box.innerHTML='';log('Levels failed: '+e.message,'e')}
+}
+$('limp').onclick=async()=>{
+  const r=await run('Import levels',()=>dr.importLevels(),false);
+  if(r&&r.imported)log('Imported '+r.imported.length+' level(s)','s');
+  if(r&&r.failed)r.failed.forEach((f)=>log(f.name+': '+f.error,'e'));
+  loadLevels();
+};
+$('lref').onclick=loadLevels;
+
+// Play
+$('apply').onclick=()=>run('Apply',()=>dr.apply());
+$('launch').onclick=()=>run('Launch',()=>dr.launch(),false);
+$('stop').onclick=()=>run('Stop game',()=>dr.stopGame(),false);
+
+// Progress: accepts a string, a number (0-100) or {message, percent}.
+dr.onProgress((p)=>{
+  p=parse(p);
+  if(typeof p==='number')p={percent:p};
+  if(typeof p==='string')p={message:p};
+  if(p&&p.percent!=null)$('bar').style.width=Math.max(0,Math.min(100,p.percent))+'%';
+  if(p&&p.message)log(p.message);
+});
+
+dr.pairingPort().then((v)=>{v=parse(v);if(v&&!$('pport').value)$('pport').value=v}).catch(()=>{});
+sync().catch((e)=>log('State failed: '+e.message,'e'));
+if(!window.__nativeFound)log('PREVIEW MODE: mock data only, nothing is sent to the headset.','e');
+log('Ready.');
+</script>
+</body>
+</html>
