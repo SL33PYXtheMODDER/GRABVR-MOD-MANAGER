@@ -7,14 +7,99 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Arrange files into the Android project layout
+        run: |
+          set -e
+          J=app/src/main/java/com/grabvr/manager
+          mkdir -p $J app/src/main/assets
+          for f in Adb Bridge Game MainActivity Store; do
+            if [ -f "$f.kt" ]; then mv "$f.kt" $J/; fi
+          done
+          if [ -f AndroidManifest.xml ]; then mv AndroidManifest.xml app/src/main/; fi
+          if [ -f index.html ]; then mv index.html app/src/main/assets/; fi
+          if [ -f bridge.js ]; then mv bridge.js app/src/main/assets/; fi
+
+          cat > settings.gradle.kts <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+                  maven("https://jitpack.io")
+              }
+          }
+          rootProject.name = "GrabVRManager"
+          include(":app")
+          EOF
+
+          cat > build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application") version "8.5.2" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+          }
+          EOF
+
+          cat > gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.enableJetifier=true
+          kotlin.code.style=official
+          EOF
+
+          cat > app/build.gradle.kts <<'EOF'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+
+          android {
+              namespace = "com.grabvr.manager"
+              compileSdk = 34
+
+              defaultConfig {
+                  applicationId = "com.grabvr.manager"
+                  minSdk = 29
+                  targetSdk = 29
+                  versionCode = 1
+                  versionName = "0.1.0"
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions { jvmTarget = "17" }
+          }
+
+          dependencies {
+              implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+              implementation("com.github.MuntashirAkon:libadb-android:1.0.1")
+              implementation("com.github.MuntashirAkon:sun-security-android:1.1")
+              implementation("org.conscrypt:conscrypt-android:2.5.2")
+          }
+          EOF
+
+          echo "---- project files ----"
+          find . -path ./.git -prune -o -type f -print | sort
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+
       - uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.9
+
       - run: gradle assembleDebug --no-daemon --stacktrace
+
       - uses: actions/upload-artifact@v4
         with:
           name: GrabVR-Manager-apk
